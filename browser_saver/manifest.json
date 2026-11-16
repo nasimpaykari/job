@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "Unified Job Coach Saver",
+  "version": "3.9.0",
+  "description": "Capture the job posting you are viewing, then review and save it in your local Job Coach.",
+  "permissions": ["activeTab", "scripting", "storage", "clipboardWrite"],
+  "action": {"default_title": "Capture this job for Job Coach", "default_popup": "popup.html"},
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'none'"}
+}

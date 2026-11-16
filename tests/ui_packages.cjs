@@ -1,0 +1,38 @@
+const {JSDOM,VirtualConsole}=require('jsdom');
+const assert=require('node:assert/strict');
+(async()=>{
+ const errs=[];const vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!e.message.includes('navigation'))errs.push(e.message)});
+ const dom=await JSDOM.fromURL('http://127.0.0.1:5053/',{resources:'usable',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){w.fetch=(u,o)=>fetch(new URL(u,'http://127.0.0.1:5053'),o);w.structuredClone=structuredClone;w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=()=>true;w.alert=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};}});
+ const w=dom.window,d=w.document,$=id=>d.getElementById(id);
+ const wait=async fn=>{for(let i=0;i<240;i++){if(fn())return;await new Promise(r=>setTimeout(r,50))}throw Error('UI timeout: '+$('notice').textContent+' / '+$('pdfStatus').textContent+' / '+errs.join('; '))};
+ const submit=id=>$(id).dispatchEvent(new w.Event('submit',{cancelable:true}));
+ const post=async(url,data,method='POST')=>{const r=await fetch('http://127.0.0.1:5053'+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const body=await r.json();assert.ok(r.ok,JSON.stringify(body));return body;};
+
+ await wait(()=>$('globalTypeRemove').options.length>0);
+ const job=await post('/api/jobs',{institution:'Package Test University',title:'Faculty',description:'Research and teaching role.',url:'https://package.example.edu/job'});
+ $('refresh').click();await wait(()=>[...$('studioJob').options].some(x=>x.value===job.id));
+ d.querySelector('[data-tab="studio"]').click();$('studioJob').value=job.id;$('studioJob').dispatchEvent(new w.Event('change'));
+ await wait(()=>$('packageDocuments').textContent.includes('No approved'));
+ $('reviewRequirements').click();await wait(()=>$('requirementsSummary').textContent.startsWith('Posting reviewed.'));
+ $('docCategory').value='CV';$('latexEditor').value='\\documentclass{article}\\begin{document}Example\\end{document}';
+ $('previewDoc').click();await wait(()=>$('pdfStatus').textContent.includes('Temporary preview only'));
+ $('approveDoc').click();await wait(()=>d.querySelector('[data-package-category="CV"]'));
+ const select=d.querySelector('[data-package-category="CV"]');select.selectedIndex=1;select.dispatchEvent(new w.Event('change'));
+ $('packageCheck').click();await wait(()=>$('packageChecks').textContent.includes('0 blocking'));
+ const chosen=d.querySelector('[data-package-category="CV"]').value;await w.loadPackages();assert.equal(d.querySelector('[data-package-category="CV"]').value,chosen);assert.ok($('packageChecks').textContent.includes('0 blocking'));
+ $('packageWarnings').checked=true;$('packageBuild').click();await wait(()=>d.querySelector('[data-submit-package]'));
+ const link=$('packageHistory').querySelector('a');const archive=await fetch(new URL(link.href));assert.equal(archive.status,200);assert.ok((await archive.arrayBuffer()).byteLength>100);
+ for(const link of $('packageAllDocuments').querySelectorAll('a'))assert.equal((await fetch(link.href)).status,200);
+ d.querySelector('[data-submit-package]').click();$('submissionDate').value='2026-10-31';$('submissionPortal').value='University portal';$('submissionConfirmation').value='RECEIPT-UI';$('submissionConfirmed').checked=true;submit('submissionForm');
+ await wait(()=>$('packageHistory').textContent.includes('RECEIPT-UI'));
+ $('jobTypeRemove').value='CV';$('latexEditor').value='Unsaved draft';$('jobTypeDelete').click();await wait(()=>d.querySelector('[data-job-type-restore="CV"]'));
+ assert.ok(![...$('docCategory').options].some(x=>x.value==='CV'));assert.equal($('latexEditor').value,'');assert.ok($('packageHistory').textContent.includes('RECEIPT-UI'));
+ d.querySelector('[data-job-type-restore="CV"]').click();await wait(()=>[...$('docCategory').options].some(x=>x.value==='CV'));
+ $('globalTypeRemove').value='Research';$('globalTypeDelete').click();await wait(()=>d.querySelector('[data-global-type-restore="Research"]'));
+ assert.ok(![...$('docCategory').options].some(x=>x.value==='Research'));
+ d.querySelector('[data-global-type-restore="Research"]').click();await wait(()=>[...$('docCategory').options].some(x=>x.value==='Research'));
+ d.querySelector('[data-delete-job="'+job.id+'"]').click();await wait(()=>d.querySelector('[data-job-restore="'+job.id+'"]'));
+ assert.ok(![...$('studioJob').options].some(x=>x.value===job.id));
+ d.querySelector('[data-job-restore="'+job.id+'"]').click();await wait(()=>[...$('studioJob').options].some(x=>x.value===job.id));
+ assert.equal(errs.length,0,errs.join('\n'));console.log('Package UI passed: approved versions, checks, ZIP/files, submission, type removal/restoration, editor clearing and job deletion/restoration.');dom.window.close();
+})().catch(e=>{console.error(e);process.exit(1)});

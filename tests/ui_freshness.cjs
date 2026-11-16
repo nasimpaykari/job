@@ -1,0 +1,21 @@
+const {JSDOM,VirtualConsole}=require('jsdom');const assert=require('node:assert/strict');
+(async()=>{
+ const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!e.message.includes('navigation'))errors.push(e.message)});
+ const dom=await JSDOM.fromURL('http://127.0.0.1:5053/',{resources:'usable',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){w.fetch=(u,o)=>fetch(new URL(u,'http://127.0.0.1:5053'),o);w.structuredClone=structuredClone;w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=()=>true;w.alert=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};}});
+ const w=dom.window,d=w.document,$=id=>d.getElementById(id);
+ const wait=async fn=>{for(let i=0;i<400;i++){if(fn())return;await new Promise(r=>setTimeout(r,50))}throw Error('UI timeout: '+$('notice').textContent+' '+errors.join(';'))};
+ const post=async(path,data)=>{const r=await fetch('http://127.0.0.1:5053'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});assert.equal(r.status,200);return r.json();};
+ await wait(()=>d.querySelector('[data-posting]'));
+ await post('/api/settings',{network_enabled:true});const job=await post('/api/jobs',{title:'Posting UI Faculty',institution:'Posting UI University',url:'https://posting.example.edu/job',deadline:'2026-12-01',description:'Original description'});
+ $('refresh').click();await wait(()=>d.querySelector(`[data-posting="${job.id}"]`));d.querySelector(`[data-posting="${job.id}"]`).click();await wait(()=>$('postingBody').textContent.includes('No website checks yet'));
+ $('postingCheck').click();await wait(()=>$('postingAccept'));assert.ok($('postingBody').textContent.includes('2027-01-01'));
+ $('postingCheck').click();await wait(()=>$('postingBody').textContent.includes('2027-02-01'));assert.ok($('postingBody').textContent.includes('three-page'));
+ assert.ok(d.querySelector(`[data-posting="${job.id}"]`).closest('.card').textContent.includes('Posting changed'));
+ $('postingApplyDeadline').checked=true;$('postingAccept').click();await wait(()=>$('notice').textContent.startsWith('Posting reviewed.'));
+ let saved=await (await fetch('http://127.0.0.1:5053/api/jobs/'+job.id)).json();assert.equal(saved.deadline,'2027-02-01');assert.equal(saved.description,'Original description');assert.equal(saved.status,'New');
+ $('postingCheck').click();await wait(()=>$('postingBody').textContent.includes('HTTP 403'));assert.ok($('postingAccept').disabled);assert.ok($('postingBody').textContent.includes('Latest usable snapshot'));
+ $('postingClose').click();$('postingFilter').value='attention';$('postingFilter').dispatchEvent(new w.Event('input'));assert.equal(d.querySelectorAll('[data-posting]').length,1);
+ $('resetCardFilters').click();assert.equal($('postingFilter').value,'');
+ $('postingLimit').value='51';$('postingBatch').click();await wait(()=>$('notice').textContent.includes('1 to 50'));
+ assert.equal(errors.length,0,errors.join('\n'));dom.window.close();console.log('Posting UI passed: first check, changed text/deadline, selective review, blocked page retention, filter, reset and invalid batch limit.');
+})().catch(e=>{console.error(e);process.exit(1)});

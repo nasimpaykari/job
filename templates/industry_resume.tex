@@ -1,0 +1,52 @@
+% Industry resume starter. Use only facts verified against your master CV.
+% One page; single column; no decorative rules or contact details in headers.
+\documentclass[11pt,letterpaper]{article}
+\usepackage[letterpaper,margin=0.72in]{geometry}
+\usepackage[T1]{fontenc}
+\IfFileExists{inter.sty}{\usepackage[sfdefault]{inter}}{\usepackage[scaled=0.92]{helvet}}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\definecolor{Navy}{HTML}{163D64}
+\definecolor{LinkBlue}{HTML}{0057B8}
+\usepackage[colorlinks=true,urlcolor=LinkBlue]{hyperref}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlength{\emergencystretch}{2em}
+\setlist[itemize]{leftmargin=1.25em,itemsep=2pt,topsep=3pt,parsep=0pt}
+\newcommand{\ressection}[1]{\par\vspace{6pt}{\large\bfseries\color{Navy}#1}\par}
+\newcommand{\placeholder}[1]{\textcolor{LinkBlue}{[#1]}}
+\begin{document}
+{\LARGE\bfseries\color{Navy}\placeholder{Full name}}\par
+\placeholder{City, State} $\cdot$ \placeholder{Email} $\cdot$ \placeholder{Portfolio or LinkedIn}
+
+\ressection{Summary}
+\placeholder{Two short lines connecting verified experience to this role.}
+
+\ressection{Skills}
+\placeholder{Relevant, verified tools and skills. Keep proficiency accurate.}
+
+\ressection{Work Experience}
+\textbf{\placeholder{Actual job title}} $\cdot$ \placeholder{Employer}\par
+\placeholder{Month Year to Month Year}
+\begin{itemize}
+\item \placeholder{Action, technical contribution and supported outcome.}
+\item \placeholder{Relevant responsibility or result, stated briefly.}
+\end{itemize}
+\textbf{\placeholder{Earlier actual job title}} $\cdot$ \placeholder{Employer}\par
+\placeholder{Month Year to Month Year}
+\begin{itemize}
+\item \placeholder{One concise contribution relevant to the target job.}
+\end{itemize}
+
+\ressection{Selected Projects}
+\textbf{\placeholder{Verified project name}}\par
+\begin{itemize}
+\item \placeholder{Your contribution and tools. Identify research as research.}
+\end{itemize}
+
+\ressection{Education}
+\textbf{\placeholder{Degree and discipline}} $\cdot$ \placeholder{University}\par
+\placeholder{Graduation date or clearly marked expected completion date}
+\end{document}

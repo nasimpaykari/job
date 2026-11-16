@@ -1,0 +1,3 @@
+'use strict';
+const form=document.getElementById('loginForm');
+if(form)form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('button');button.disabled=true;try{const r=await fetch(form.dataset.setup==='true'?'/api/setup':'/api/login',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name=csrf]').content},body:JSON.stringify({username:document.getElementById('username').value,password:document.getElementById('password').value})});const data=await r.json();if(!r.ok)throw Error(data.error||'Sign-in failed');location.href='/';}catch(err){document.getElementById('loginError').textContent=err.message;}finally{button.disabled=false;}};

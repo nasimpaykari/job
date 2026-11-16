@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Save a job</title><link rel="stylesheet" href="popup.css"><script defer src="extract.js"></script><script defer src="popup.js"></script></head><body>
+<h1>Save to Job Coach</h1><p id="message" role="status">Reading the current posting…</p>
+<label>Title<input id="title" maxlength="500"></label><label>University / employer<input id="institution" maxlength="500"></label><label>Posting URL<input id="url" maxlength="4096"></label>
+<label>Captured description<textarea id="description" rows="7" maxlength="60000"></textarea></label>
+<details><summary>Other captured details</summary><label>Location<input id="location" maxlength="1000"></label><label>State / region<input id="region" maxlength="200"></label><label>Country<input id="country" maxlength="200"></label><label>Deadline<input id="deadline" maxlength="500"></label></details>
+<label>Job Coach address<input id="appUrl" value="http://127.0.0.1:5050" aria-describedby="addressHelp"></label><small id="addressHelp">Use the local address shown when you start the app.</small>
+<div class="actions"><button id="copyOpen" disabled>Copy &amp; open Job Coach</button><button id="download" disabled>Download capture</button></div>
+<p>In Job Coach, open <strong>Import browser capture</strong>, paste or select the downloaded file, then review and save. Sign in first if needed.</p><small>Only this page is read when you click the extension. It does not read cookies or send the posting to an AI provider. A copied capture stays on your clipboard until replaced.</small>
+</body></html>

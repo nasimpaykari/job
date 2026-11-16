@@ -1,0 +1,1 @@
+{"manifest_version":3,"name":"Job Coach Reviewed Autofill","version":"6.0.0","description":"Review exported approved fields and fill supported Greenhouse or Lever forms. Never submits.","permissions":["activeTab","scripting"],"action":{"default_popup":"popup.html"}}

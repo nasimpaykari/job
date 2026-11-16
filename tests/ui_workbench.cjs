@@ -1,0 +1,35 @@
+const {JSDOM,VirtualConsole}=require('jsdom');
+const assert=require('node:assert/strict');
+(async()=>{
+ const errs=[];const vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!e.message.includes('navigation'))errs.push(e.message)});
+ const dom=await JSDOM.fromURL('http://127.0.0.1:5053/',{resources:'usable',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){w.fetch=(u,o)=>fetch(new URL(u,'http://127.0.0.1:5053'),o);w.structuredClone=structuredClone;w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=()=>true;w.alert=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};}});
+ const w=dom.window,d=w.document,$=id=>d.getElementById(id);
+ const wait=async fn=>{for(let i=0;i<240;i++){if(fn())return;await new Promise(r=>setTimeout(r,50))}throw Error('UI timeout: '+$('notice').textContent+' / '+$('pdfStatus').textContent+' / '+errs.join('; '))};
+ const submit=id=>$(id).dispatchEvent(new w.Event('submit',{cancelable:true}));
+ const post=async(url,data,method='POST')=>{const r=await fetch('http://127.0.0.1:5053'+url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const body=await r.json();assert.ok(r.ok,JSON.stringify(body));return body;};
+
+ await wait(()=>$('globalTypeRemove').options.length>0);
+ const job=await post('/api/jobs',{institution:'Workbench Robotics Inc',title:'Robotics Engineer',career_track:'Industry',work_mode:'Hybrid',seniority:'Senior',next_action:'Tailor resume',next_action_due:'2026-01-01',priority:'High',description:'Python experience is required. Robotics experience is preferred.',url:'https://industry.example.com/jobs/1'});
+ const text='Developed robotic navigation software using Python and ROS.';
+ const src=await post('/api/career/sources',{label:'Master CV evidence',content:text});
+ const fact=await post('/api/career/facts',{text,quote:text,source_id:src.id,category:'skills',status:'verified'});
+ $('refresh').click();await wait(()=>d.querySelector('[data-strategy="'+job.id+'"]'));
+ assert.ok($('focusActions').textContent.includes('Tailor resume'));assert.ok($('focusActions').textContent.includes('Overdue'));
+ $('filter_career_track').value='Industry';$('filter_career_track').dispatchEvent(new w.Event('input'));
+ assert.ok($('jobList').textContent.includes('Workbench Robotics Inc'));assert.ok(!$('jobList').textContent.includes('University:'));
+ d.querySelector('[data-strategy="'+job.id+'"]').click();await wait(()=>$('strategySummary').textContent.includes('0 current'));
+ $('strategySuggest').click();await wait(()=>d.querySelectorAll('[data-criterion-edit]').length===2);
+ d.querySelector('[data-criterion-edit]').click();$('criterionStatus').value='Supported';d.querySelector('#criterionFacts input').checked=true;$('criterionReviewed').checked=true;submit('strategyForm');
+ await wait(()=>$('strategySummary').textContent.includes('1 current'));
+ $('strategyDocuments').click();await wait(()=>$('studioJob').value===job.id);$('resumeStarter').click();await wait(()=>$('latexEditor').value.includes('Work Experience'));
+ assert.equal($('docCategory').value,'Resume');assert.ok($('latexEditor').value.includes('placeholder'));
+ $('industryCoverStarter').click();await wait(()=>$('latexEditor').value.includes('Dear Hiring Team'));assert.equal($('docCategory').value,'Cover');
+ d.querySelector('[data-tab="interview"]').click();$('storyPanel').open=true;await wait(()=>d.querySelector('#storyFacts input'));
+ $('storyTitle').value='Navigation project';$('storyCompetency').value='Troubleshooting';$('storySituation').value='Navigation research';$('storyTask').value='Develop navigation software';$('storyAction').value='Built a Python implementation';$('storyResult').value='Completed the implementation';d.querySelector('#storyFacts input').checked=true;$('storyVerified').checked=true;submit('storyForm');
+ await wait(()=>$('storyList').textContent.includes('Approved'));
+ $('healthCheck').click();await wait(()=>$('healthOutput').textContent.includes('Database check: OK'));
+ await post('/api/jobs/'+job.id,{description:'C++ is now required.'},'PATCH');$('refresh').click();await wait(()=>$('strategyList').textContent.includes('Changed · review again'));
+ d.querySelector('[data-story-edit]').click();assert.equal($('storyTitle').value,'Navigation project');
+ d.querySelector('[data-story-delete]').click();await wait(()=>$('storyList').textContent.includes('No stories'));
+ assert.equal(errs.length,0,errs.join('\n'));console.log('Workbench UI passed: industry filters, dated actions, criteria/evidence/review/staleness, resume starter, STAR stories, health and removal.');dom.window.close();
+})().catch(e=>{console.error(e);process.exit(1)});

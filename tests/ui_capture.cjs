@@ -1,0 +1,22 @@
+const {JSDOM,VirtualConsole}=require('jsdom');const assert=require('node:assert/strict');
+(async()=>{
+ const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!e.message.includes('navigation'))errors.push(e.message)});
+ const dom=await JSDOM.fromURL('http://127.0.0.1:5053/#browser-import',{resources:'usable',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){w.fetch=(u,o)=>fetch(new URL(u,'http://127.0.0.1:5053'),o);w.structuredClone=structuredClone;w.TextEncoder=TextEncoder;w.HTMLElement.prototype.scrollIntoView=function(){};w.confirm=()=>true;w.alert=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};}});
+ const w=dom.window,d=w.document,$=id=>d.getElementById(id);
+ const wait=async fn=>{for(let i=0;i<400;i++){if(fn())return;await new Promise(r=>setTimeout(r,50))}throw Error('UI timeout: '+$('notice').textContent+' '+$('captureResult').textContent+' '+errors.join(';'))};
+ const post=async(path,data)=>{const r=await fetch('http://127.0.0.1:5053'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});assert.equal(r.status,200);return r.json();};
+ await wait(()=>$('captureDialog').open);assert.equal(w.location.hash,'');
+ const payload={format:'job-coach-capture',version:1,title:'Browser UI Faculty',institution:'Browser UI University',url:'https://browser-ui.example.edu/jobs/123',description:'Teach robotics and submit a research statement.',region:'New Jersey',deadline:'2027-02-01'};
+ $('captureRaw').value='{invalid';$('capturePreview').click();await wait(()=>$('captureResult').textContent.includes('Paste the capture JSON'));
+ $('captureRaw').value=JSON.stringify(payload);$('capturePreview').click();await wait(()=>!$('captureEditor').hidden);
+ assert.equal($('capture_title').value,payload.title);assert.equal($('capture_region').value,'New Jersey');
+ const before=await (await fetch('http://127.0.0.1:5053/api/state')).json();assert.ok(!before.jobs.some(j=>j.title===payload.title));
+ $('captureReviewed').checked=true;$('captureForm').dispatchEvent(new w.Event('submit',{cancelable:true}));await wait(()=>$('notice').textContent.startsWith('Browser capture saved.'));
+ let saved=await (await fetch('http://127.0.0.1:5053/api/state')).json();const job=saved.jobs.find(j=>j.title===payload.title);assert.ok(job);assert.equal(job.region,'New Jersey');assert.ok(saved.universities.some(u=>u.name===payload.institution));assert.equal($('captureRaw').value,'');
+ await post('/api/jobs/'+job.id+'/ignore',{});
+ $('captureOpen').click();$('captureRaw').value=JSON.stringify({...payload,description:'Replacement text should not save'});$('capturePreview').click();await wait(()=>$('captureResult').textContent.includes('Ignored'));
+ $('captureReviewed').checked=true;$('captureForm').dispatchEvent(new w.Event('submit',{cancelable:true}));await wait(()=>$('notice').textContent.includes('remains ignored'));
+ const unchanged=await (await fetch('http://127.0.0.1:5053/api/jobs/'+job.id)).json();assert.equal(unchanged.description,payload.description);assert.equal(unchanged.status,'Ignored');
+ $('captureOpen').click();$('captureRaw').value=JSON.stringify(payload);$('capturePreview').click();await wait(()=>!$('captureEditor').hidden);$('captureReviewed').checked=true;$('capture_title').value='Edit';$('capture_title').dispatchEvent(new w.Event('input'));assert.equal($('captureReviewed').checked,false);
+ $('captureClose').click();assert.equal($('captureRaw').value,'');assert.ok($('captureEditor').hidden);assert.equal(errors.length,0,errors.join('\n'));dom.window.close();console.log('Capture UI passed: deep link, malformed input, review-only preview, save, directory/state, ignored duplicate preservation, edit acknowledgement reset and cancel cleanup.');
+})().catch(e=>{console.error(e);process.exit(1)});

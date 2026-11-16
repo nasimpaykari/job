@@ -1,0 +1,32 @@
+# Local Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local workspaces, databases, credentials, and generated files
+data/
+**/data/
+instance/
+runtime/
+learning/
+documents/
+document_versions/
+application_packages/
+*.db
+*.sqlite
+*.sqlite3
+credentials.json
+session.secret
+.env
+.env.*
+*.log
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
