@@ -100,3 +100,4 @@ Some browser UI tests require Node.js. Optional model-training and voice depende
 ## Development acknowledgment and license
 
 OpenAI tools were used as development assistance. The AI features in the application are configurable and are not an OpenAI-only service.
+You may use this project free of charge for non-commercial purposes.
